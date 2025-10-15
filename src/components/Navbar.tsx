@@ -62,7 +62,7 @@ const Navbar: React.FC = () => {
               <ChartBarIcon className="w-5 h-5" />
               <span>Analytics</span>
             </Link>
-            {state.user && (
+            
               <Link
                 to="/bookmarks"
                 className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
@@ -70,7 +70,7 @@ const Navbar: React.FC = () => {
                 <BookmarkIcon className="w-5 h-5" />
                 <span>Bookmarks</span>
               </Link>
-            )}
+            
           </div>
 
           {/* Right side */}
