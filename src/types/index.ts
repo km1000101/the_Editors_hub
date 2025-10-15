@@ -64,3 +64,10 @@ export interface AppState {
   bookmarks: Bookmark[];
   analytics: AnalyticsData;
 }
+export interface Bookmark {
+  id: string;
+  articleId: string;
+  userId: string;
+  createdAt: string;
+  article?: NewsArticle;
+}
