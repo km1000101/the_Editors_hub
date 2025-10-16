@@ -18,7 +18,8 @@ type AppAction =
   | { type: 'SET_NEWS_ARTICLES'; payload: NewsArticle[] }
   | { type: 'UPDATE_NEWS_ANALYTICS'; payload: AnalyticsData }
   | { type: 'INCREMENT_VIEWS'; payload: string }
-  | { type: 'INCREMENT_LIKES'; payload: string };
+  | { type: 'INCREMENT_LIKES'; payload: string }
+  | { type: 'ADD_COMMENT'; payload: { postId: string; comment: { id: string; postId: string; author: string; content: string; createdAt: string } } };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -111,6 +112,16 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         blogPosts: state.blogPosts.map(post =>
           post.id === action.payload
             ? { ...post, likes: post.likes + 1 }
+            : post
+        )
+      };
+
+    case 'ADD_COMMENT':
+      return {
+        ...state,
+        blogPosts: state.blogPosts.map(post =>
+          post.id === action.payload.postId
+            ? { ...post, comments: [...post.comments, action.payload.comment] }
             : post
         )
       };

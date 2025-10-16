@@ -221,12 +221,12 @@ const NewsAggregator: React.FC = () => {
         // Derive "topPosts" from article titles using randomized engagement proxies
         const topPosts = combined
           .slice(0, 10)
-          .map(a => ({
+          .map((a: NewsArticle) => ({
             title: (a.title || 'Untitled').length > 30 ? (a.title || 'Untitled').substring(0, 30) + '...' : (a.title || 'Untitled'),
             views: Math.floor(Math.random() * 1000) + 100,
             likes: Math.floor(Math.random() * 300) + 20
           }))
-          .sort((a, b) => (b.views + b.likes) - (a.views + a.likes))
+          .sort((a: { title: string; views: number; likes: number }, b: { title: string; views: number; likes: number }) => (b.views + b.likes) - (a.views + a.likes))
           .slice(0, 5);
 
         const analytics: AnalyticsData = { postViews, postLikes, comments, topPosts };
