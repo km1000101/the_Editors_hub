@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // Added useEffect and useRef
+import React, { useState, useEffect, useRef } from 'react'; // ADDED useEffect and useRef
 import { motion } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
 import type { BlogPost, Comment } from '../types';
@@ -40,6 +40,7 @@ const BlogManager: React.FC = () => {
 
   // Effect 1: Load draft on component mount
   useEffect(() => {
+    // Only attempt to load a draft if we are in 'create' mode (not editing)
     if (!editingPost) {
       const savedDraft = localStorage.getItem(DRAFT_KEY);
       if (savedDraft) {
@@ -53,21 +54,24 @@ const BlogManager: React.FC = () => {
         }
       }
     }
+    // Cleanup function for the timer reference
     return () => {
         if (autosaveTimerRef.current) {
             clearTimeout(autosaveTimerRef.current);
         }
     };
-  }, [editingPost]);
+  }, [editingPost]); // Re-run if we switch from editing to creating
 
   // Effect 2: Setup interval to save draft whenever form data changes
   useEffect(() => {
     if (showCreateForm) {
+      // Clear previous timer to debounce the save operation
       if (autosaveTimerRef.current) {
         clearTimeout(autosaveTimerRef.current);
       }
 
       autosaveTimerRef.current = window.setTimeout(() => {
+        // Only save if the form has some content
         if (formData.title.trim() || formData.content.trim()) {
             localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
             console.log("Draft saved automatically.");
@@ -75,6 +79,7 @@ const BlogManager: React.FC = () => {
       }, AUTOSAVE_INTERVAL);
     }
     
+    // Cleanup the timeout when the form state changes or the component unmounts
     return () => {
         if (autosaveTimerRef.current) {
             clearTimeout(autosaveTimerRef.current);
@@ -84,10 +89,9 @@ const BlogManager: React.FC = () => {
   // --- END AUTOSAVE LOGIC ---
 
 
-  // --- LIKE TOGGLE HANDLER (New Logic) ---
+  // --- LIKE TOGGLE HANDLER ---
 
   const handleLikeToggle = (postId: string, currentLikes: string[] | undefined) => {
-    // FIX: Safely check for userId and return if undefined
     const userId = state.user?.id;
     if (!userId) {
       toast.error("Please sign in to like a post.", { icon: "🔒" });
@@ -99,17 +103,19 @@ const BlogManager: React.FC = () => {
     
     // Dispatch the single TOGGLE_LIKE action
     dispatch({ type: 'TOGGLE_LIKE', payload: { postId, userId } });
-    toast.success(successMsg, { icon: hasLiked ? "💔" : "❤️" });
+    toast.success(successMsg, { icon: hasLiked ? "🤍" : "❤️" });
   };
 
 
-  // --- CRUD HANDLERS ---
+  // --- CRUD HANDLERS (UPDATED TO CLEAR DRAFT) ---
 
   const handleCreatePost = () => {
     if (!formData.title || !formData.content) return;
 
     // Clear draft storage on successful creation
-    localStorage.removeItem(DRAFT_KEY);
+    if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(DRAFT_KEY);
+    }
     if (autosaveTimerRef.current) {
         clearTimeout(autosaveTimerRef.current);
     }
@@ -139,7 +145,9 @@ const BlogManager: React.FC = () => {
     if (!editingPost || !formData.title || !formData.content) return;
 
     // Clear draft storage on successful update
-    localStorage.removeItem(DRAFT_KEY);
+    if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(DRAFT_KEY);
+    }
     if (autosaveTimerRef.current) {
         clearTimeout(autosaveTimerRef.current);
     }
@@ -499,7 +507,7 @@ const BlogManager: React.FC = () => {
             }}
             className="btn-primary"
           >
-            Create Your First Post
+            Create Your First Post!
           </button>
         </motion.div>
       )}
