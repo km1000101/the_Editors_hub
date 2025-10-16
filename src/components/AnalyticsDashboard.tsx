@@ -56,21 +56,52 @@ const AnalyticsDashboard: React.FC = () => {
       return date.toISOString().split('T')[0];
     });
 
-    // Generate mock analytics data based on blog posts
-    const postViews = last30Days.map(date => ({
-      date,
-      views: Math.floor(Math.random() * 100) + userPosts.length * 5
-    }));
+    // Build deterministic, user-specific time series from saved data
+    const viewsPerDay: Record<string, number> = Object.fromEntries(last30Days.map(d => [d, 0]));
+    const likesPerDay: Record<string, number> = Object.fromEntries(last30Days.map(d => [d, 0]));
+    const commentsPerDay: Record<string, number> = Object.fromEntries(last30Days.map(d => [d, 0]));
 
-    const postLikes = last30Days.map(date => ({
-      date,
-      likes: Math.floor(Math.random() * 50) + userPosts.length * 2
-    }));
+    userPosts.forEach(post => {
+      const created = new Date(post.createdAt);
+      // Only consider the last 30 days window
+      const start = new Date(now);
+      start.setDate(start.getDate() - 29);
 
-    const comments = last30Days.map(date => ({
-      date,
-      comments: Math.floor(Math.random() * 20) + userPosts.length
-    }));
+      const effectiveStart = created > start ? created : start;
+      const daysBetween = Math.max(1, Math.floor((now.getTime() - effectiveStart.getTime()) / (24 * 60 * 60 * 1000)) + 1);
+
+      // Evenly distribute views and likes across the period from effectiveStart to now
+      const baseViews = Math.floor(post.views / daysBetween);
+      const extraViews = post.views % daysBetween;
+      const baseLikes = Math.floor(post.likes / daysBetween);
+      const extraLikes = post.likes % daysBetween;
+
+      for (let i = 0; i < daysBetween; i++) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        if (d < effectiveStart) break;
+        const key = d.toISOString().split('T')[0];
+        if (viewsPerDay[key] !== undefined) {
+          viewsPerDay[key] += baseViews + (i < extraViews ? 1 : 0);
+        }
+        if (likesPerDay[key] !== undefined) {
+          likesPerDay[key] += baseLikes + (i < extraLikes ? 1 : 0);
+        }
+      }
+
+      // Aggregate actual comments by their timestamps
+      post.comments.forEach(c => {
+        const cDate = new Date(c.createdAt);
+        const key = cDate.toISOString().split('T')[0];
+        if (commentsPerDay[key] !== undefined) {
+          commentsPerDay[key] += 1;
+        }
+      });
+    });
+
+    const postViews = last30Days.map(date => ({ date, views: viewsPerDay[date] }));
+    const postLikes = last30Days.map(date => ({ date, likes: likesPerDay[date] }));
+    const comments = last30Days.map(date => ({ date, comments: commentsPerDay[date] }));
 
     const topPosts = userPosts
       .sort((a, b) => (b.views + b.likes) - (a.views + a.likes))
