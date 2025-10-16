@@ -63,4 +63,13 @@ export interface AppState {
   blogPosts: BlogPost[];
   bookmarks: Bookmark[];
   analytics: AnalyticsData;
+  newsArticles?: NewsArticle[];
+  newsAnalytics?: AnalyticsData;
+}
+export interface Bookmark {
+  id: string;
+  articleId: string;
+  userId: string;
+  createdAt: string;
+  article?: NewsArticle;
 }

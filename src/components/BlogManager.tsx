@@ -12,13 +12,15 @@ import {
   CalendarIcon,
   UserIcon
 } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
+import ReactQuill from 'react-quill'; // Import React Quill
+import 'react-quill/dist/quill.snow.css'; // Import Quill's CSS
 
 const BlogManager: React.FC = () => {
   const { state, dispatch } = useApp();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
+  const [commentText, setCommentText] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -108,6 +110,32 @@ const BlogManager: React.FC = () => {
     setShowCreateForm(true);
   };
 
+  const handleAddComment = (postId: string) => {
+    if (!commentText.trim()) return;
+
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      postId,
+      author: state.user?.username || 'Anonymous',
+      content: commentText,
+      createdAt: new Date().toISOString()
+    };
+
+    dispatch({
+      type: 'ADD_COMMENT',
+      payload: { postId, comment: newComment }
+    });
+
+    setCommentText('');
+
+    if (selectedPost) {
+      setSelectedPost({
+        ...selectedPost,
+        comments: [...selectedPost.comments, newComment]
+      });
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -126,7 +154,10 @@ const BlogManager: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => setShowCreateForm(true)}
+          onClick={() => {
+            resetForm();
+            setShowCreateForm(true);
+          }}
           className="btn-primary inline-flex items-center"
         >
           <PlusIcon className="w-5 h-5 mr-2" />
@@ -177,11 +208,11 @@ const BlogManager: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Content
               </label>
-              <textarea
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="input-field h-40 resize-none"
-                placeholder="Write your post content here..."
+              {/* This is the new ReactQuill component */}
+              <ReactQuill 
+                value={formData.content} 
+                onChange={(content) => setFormData({ ...formData, content })} 
+                className="bg-white dark:bg-gray-700 rounded-md text-gray-900 dark:text-white"
               />
             </div>
 
@@ -340,7 +371,10 @@ const BlogManager: React.FC = () => {
             Start writing your first blog post to share your thoughts with the world.
           </p>
           <button
-            onClick={() => setShowCreateForm(true)}
+            onClick={() => {
+              resetForm();
+              setShowCreateForm(true);
+            }}
             className="btn-primary"
           >
             Create Your First Post
@@ -373,7 +407,7 @@ const BlogManager: React.FC = () => {
                   onClick={() => setSelectedPost(null)}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  ×
+                  
                 </button>
               </div>
 
@@ -394,6 +428,50 @@ const BlogManager: React.FC = () => {
                     <span>•</span>
                     <span>{selectedPost.likes} likes</span>
                   </div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  Comments ({selectedPost.comments.length})
+                </h3>
+
+                <div className="space-y-4 mb-6">
+                  {selectedPost.comments.map((comment) => (
+                    <div key={comment.id} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <UserIcon className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {comment.author}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatDate(comment.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        {comment.content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddComment(selectedPost.id)}
+                    placeholder="Add a comment..."
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={() => handleAddComment(selectedPost.id)}
+                    className="btn-primary"
+                  >
+                    Post
+                  </button>
                 </div>
               </div>
             </div>

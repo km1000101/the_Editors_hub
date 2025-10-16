@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
 import type { AnalyticsData } from '../types';
@@ -17,7 +17,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Brush
 } from 'recharts';
 import {
   ChartBarIcon,
@@ -36,12 +37,23 @@ const AnalyticsDashboard: React.FC = () => {
     comments: [],
     topPosts: []
   });
+  const [source, setSource] = useState<'blog' | 'news'>('blog');
+  const [rangeIndex, setRangeIndex] = useState<{ startIndex: number; endIndex: number } | null>(null);
 
   useEffect(() => {
-    generateAnalyticsData();
-  }, [state.blogPosts]);
+    if (source === 'blog') {
+      generateAnalyticsData();
+    } else if (source === 'news' && state.newsAnalytics) {
+      setAnalytics(state.newsAnalytics);
+    }
+  }, [state.blogPosts, state.newsAnalytics, source]);
 
   const generateAnalyticsData = () => {
+    const currentUsername = state.user?.username;
+    const userPosts = currentUsername
+      ? state.blogPosts.filter(post => post.author === currentUsername)
+      : state.blogPosts;
+
     const now = new Date();
     const last30Days = Array.from({ length: 30 }, (_, i) => {
       const date = new Date(now);
@@ -52,20 +64,20 @@ const AnalyticsDashboard: React.FC = () => {
     // Generate mock analytics data based on blog posts
     const postViews = last30Days.map(date => ({
       date,
-      views: Math.floor(Math.random() * 100) + state.blogPosts.length * 5
+      views: Math.floor(Math.random() * 100) + userPosts.length * 5
     }));
 
     const postLikes = last30Days.map(date => ({
       date,
-      likes: Math.floor(Math.random() * 50) + state.blogPosts.length * 2
+      likes: Math.floor(Math.random() * 50) + userPosts.length * 2
     }));
 
     const comments = last30Days.map(date => ({
       date,
-      comments: Math.floor(Math.random() * 20) + state.blogPosts.length
+      comments: Math.floor(Math.random() * 20) + userPosts.length
     }));
 
-    const topPosts = state.blogPosts
+    const topPosts = userPosts
       .sort((a, b) => (b.views + b.likes) - (a.views + a.likes))
       .slice(0, 5)
       .map(post => ({
@@ -82,10 +94,27 @@ const AnalyticsDashboard: React.FC = () => {
     });
   };
 
-  const totalViews = analytics.postViews.reduce((sum, item) => sum + item.views, 0);
-  const totalLikes = analytics.postLikes.reduce((sum, item) => sum + item.likes, 0);
-  const totalComments = analytics.comments.reduce((sum, item) => sum + item.comments, 0);
-  const totalPosts = state.blogPosts.length;
+  const filteredViews = useMemo(() => {
+    if (!rangeIndex) return analytics.postViews;
+    return analytics.postViews.slice(rangeIndex.startIndex, rangeIndex.endIndex + 1);
+  }, [analytics.postViews, rangeIndex]);
+
+  const filteredLikes = useMemo(() => {
+    if (!rangeIndex) return analytics.postLikes;
+    return analytics.postLikes.slice(rangeIndex.startIndex, rangeIndex.endIndex + 1);
+  }, [analytics.postLikes, rangeIndex]);
+
+  const filteredComments = useMemo(() => {
+    if (!rangeIndex) return analytics.comments;
+    return analytics.comments.slice(rangeIndex.startIndex, rangeIndex.endIndex + 1);
+  }, [analytics.comments, rangeIndex]);
+
+  const totalViews = filteredViews.reduce((sum, item) => sum + item.views, 0);
+  const totalLikes = filteredLikes.reduce((sum, item) => sum + item.likes, 0);
+  const totalComments = filteredComments.reduce((sum, item) => sum + item.comments, 0);
+  const totalPosts = source === 'blog'
+    ? (state.user ? state.blogPosts.filter(p => p.author === state.user?.username).length : state.blogPosts.length)
+    : (state.newsArticles?.length || 0);
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
@@ -135,6 +164,23 @@ const AnalyticsDashboard: React.FC = () => {
         <p className="text-xl text-gray-600 dark:text-gray-300">
           Track your content performance and engagement metrics
         </p>
+        <div className="mt-4 flex items-center space-x-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400">Data source:</span>
+          <div className="inline-flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+            <button
+              className={`px-3 py-1 text-sm ${source === 'blog' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-700 dark:text-gray-300'}`}
+              onClick={() => setSource('blog')}
+            >
+              Blog
+            </button>
+            <button
+              className={`px-3 py-1 text-sm ${source === 'news' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-700 dark:text-gray-300'}`}
+              onClick={() => setSource('news')}
+            >
+              News
+            </button>
+          </div>
+        </div>
       </motion.div>
 
       {/* Stats Grid */}
@@ -182,7 +228,11 @@ const AnalyticsDashboard: React.FC = () => {
             Views Over Time
           </h3>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={analytics.postViews}>
+            <AreaChart data={analytics.postViews}
+              onMouseUp={(e: any) => {
+                if (e && e.activeLabel && e.brushIndex !== undefined) return; // ignore
+              }}
+            >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="date" 
@@ -203,6 +253,15 @@ const AnalyticsDashboard: React.FC = () => {
                 stroke="#3B82F6" 
                 fill="#3B82F6" 
                 fillOpacity={0.3}
+              />
+              <Brush dataKey="date" travellerWidth={8} height={24} tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                onChange={(range: any) => {
+                  if (range && typeof range.startIndex === 'number' && typeof range.endIndex === 'number') {
+                    setRangeIndex({ startIndex: range.startIndex, endIndex: range.endIndex });
+                  } else {
+                    setRangeIndex(null);
+                  }
+                }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -241,6 +300,15 @@ const AnalyticsDashboard: React.FC = () => {
                 strokeWidth={2}
                 dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
               />
+              <Brush dataKey="date" travellerWidth={8} height={24} tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                onChange={(range: any) => {
+                  if (range && typeof range.startIndex === 'number' && typeof range.endIndex === 'number') {
+                    setRangeIndex({ startIndex: range.startIndex, endIndex: range.endIndex });
+                  } else {
+                    setRangeIndex(null);
+                  }
+                }}
+              />
             </LineChart>
           </ResponsiveContainer>
         </motion.div>
@@ -272,6 +340,15 @@ const AnalyticsDashboard: React.FC = () => {
                 })}
               />
               <Bar dataKey="comments" fill="#10B981" />
+              <Brush dataKey="date" travellerWidth={8} height={24} tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                onChange={(range: any) => {
+                  if (range && typeof range.startIndex === 'number' && typeof range.endIndex === 'number') {
+                    setRangeIndex({ startIndex: range.startIndex, endIndex: range.endIndex });
+                  } else {
+                    setRangeIndex(null);
+                  }
+                }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </motion.div>
@@ -312,6 +389,41 @@ const AnalyticsDashboard: React.FC = () => {
               </div>
             ))}
           </div>
+        </motion.div>
+
+        {/* Engagement Split (Pie) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.75 }}
+          className="card p-6"
+        >
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Engagement Split (Views vs Likes)
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Tooltip />
+              <Legend />
+              <Pie
+                data={[
+                  { name: 'Views', value: totalViews },
+                  { name: 'Likes', value: totalLikes },
+                  { name: 'Comments', value: totalComments }
+                ]}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                label
+              >
+                <Cell fill="#3B82F6" />
+                <Cell fill="#EF4444" />
+                <Cell fill="#10B981" />
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
         </motion.div>
       </div>
 

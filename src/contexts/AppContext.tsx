@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import type { AppState, BlogPost, User, Bookmark, AnalyticsData } from '../types';
+import type { AppState, BlogPost, User, Bookmark, AnalyticsData, NewsArticle } from '../types';
 
 interface AppContextType {
   state: AppState;
@@ -8,14 +8,18 @@ interface AppContextType {
 
 type AppAction =
   | { type: 'SET_USER'; payload: User | null }
+  | { type: 'LOGOUT' }
   | { type: 'ADD_BLOG_POST'; payload: BlogPost }
   | { type: 'UPDATE_BLOG_POST'; payload: BlogPost }
   | { type: 'DELETE_BLOG_POST'; payload: string }
   | { type: 'ADD_BOOKMARK'; payload: Bookmark }
   | { type: 'REMOVE_BOOKMARK'; payload: string }
   | { type: 'UPDATE_ANALYTICS'; payload: AnalyticsData }
+  | { type: 'SET_NEWS_ARTICLES'; payload: NewsArticle[] }
+  | { type: 'UPDATE_NEWS_ANALYTICS'; payload: AnalyticsData }
   | { type: 'INCREMENT_VIEWS'; payload: string }
-  | { type: 'INCREMENT_LIKES'; payload: string };
+  | { type: 'INCREMENT_LIKES'; payload: string }
+  | { type: 'ADD_COMMENT'; payload: { postId: string; comment: { id: string; postId: string; author: string; content: string; createdAt: string } } };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -27,12 +31,20 @@ export const useApp = () => {
   return context;
 };
 
+// Re-add the initialState constant here
 const initialState: AppState = {
   theme: 'light',
   user: null,
   blogPosts: [],
   bookmarks: [],
   analytics: {
+    postViews: [],
+    postLikes: [],
+    comments: [],
+    topPosts: []
+  },
+  newsArticles: [],
+  newsAnalytics: {
     postViews: [],
     postLikes: [],
     comments: [],
@@ -44,36 +56,46 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
   switch (action.type) {
     case 'SET_USER':
       return { ...state, user: action.payload };
-    
+
+    case 'LOGOUT':
+      localStorage.removeItem('user');
+      return { ...state, user: null };
+
     case 'ADD_BLOG_POST':
       return { ...state, blogPosts: [...state.blogPosts, action.payload] };
-    
+
     case 'UPDATE_BLOG_POST':
       return {
         ...state,
         blogPosts: state.blogPosts.map(post =>
           post.id === action.payload.id ? action.payload : post
-        )
+        ),
       };
-    
+
     case 'DELETE_BLOG_POST':
       return {
         ...state,
         blogPosts: state.blogPosts.filter(post => post.id !== action.payload)
       };
-    
+
     case 'ADD_BOOKMARK':
       return { ...state, bookmarks: [...state.bookmarks, action.payload] };
-    
+
     case 'REMOVE_BOOKMARK':
       return {
         ...state,
         bookmarks: state.bookmarks.filter(bookmark => bookmark.id !== action.payload)
       };
-    
+
     case 'UPDATE_ANALYTICS':
       return { ...state, analytics: action.payload };
-    
+
+    case 'SET_NEWS_ARTICLES':
+      return { ...state, newsArticles: action.payload };
+
+    case 'UPDATE_NEWS_ANALYTICS':
+      return { ...state, newsAnalytics: action.payload };
+
     case 'INCREMENT_VIEWS':
       return {
         ...state,
@@ -83,7 +105,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             : post
         )
       };
-    
+
     case 'INCREMENT_LIKES':
       return {
         ...state,
@@ -93,10 +115,33 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             : post
         )
       };
-    
+
+    case 'ADD_COMMENT':
+      return {
+        ...state,
+        blogPosts: state.blogPosts.map(post =>
+          post.id === action.payload.postId
+            ? { ...post, comments: [...post.comments, action.payload.comment] }
+            : post
+        )
+      };
+
     default:
       return state;
   }
+};
+
+const initializer = (initialState: AppState) => {
+  const savedUser = localStorage.getItem('user');
+  const savedPosts = localStorage.getItem('blogPosts');
+  const savedBookmarks = localStorage.getItem('bookmarks');
+
+  return {
+    ...initialState,
+    user: savedUser ? JSON.parse(savedUser) : initialState.user,
+    blogPosts: savedPosts ? JSON.parse(savedPosts) : initialState.blogPosts,
+    bookmarks: savedBookmarks ? JSON.parse(savedBookmarks) : initialState.bookmarks,
+  };
 };
 
 interface AppProviderProps {
@@ -104,47 +149,13 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  const [state, dispatch] = useReducer(appReducer, initialState);
+  const [state, dispatch] = useReducer(appReducer, initialState, initializer);
 
-  // Load data from localStorage on mount
   useEffect(() => {
-    const savedPosts = localStorage.getItem('blogPosts');
-    const savedBookmarks = localStorage.getItem('bookmarks');
-    const savedUser = localStorage.getItem('user');
-
-    if (savedPosts) {
-      const posts = JSON.parse(savedPosts);
-      posts.forEach((post: BlogPost) => {
-        dispatch({ type: 'ADD_BLOG_POST', payload: post });
-      });
-    }
-
-    if (savedBookmarks) {
-      const bookmarks = JSON.parse(savedBookmarks);
-      bookmarks.forEach((bookmark: Bookmark) => {
-        dispatch({ type: 'ADD_BOOKMARK', payload: bookmark });
-      });
-    }
-
-    if (savedUser) {
-      dispatch({ type: 'SET_USER', payload: JSON.parse(savedUser) });
-    }
-  }, []);
-
-  // Save data to localStorage when state changes
-  useEffect(() => {
+    localStorage.setItem('user', JSON.stringify(state.user));
     localStorage.setItem('blogPosts', JSON.stringify(state.blogPosts));
-  }, [state.blogPosts]);
-
-  useEffect(() => {
     localStorage.setItem('bookmarks', JSON.stringify(state.bookmarks));
-  }, [state.bookmarks]);
-
-  useEffect(() => {
-    if (state.user) {
-      localStorage.setItem('user', JSON.stringify(state.user));
-    }
-  }, [state.user]);
+  }, [state.user, state.blogPosts, state.bookmarks]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
