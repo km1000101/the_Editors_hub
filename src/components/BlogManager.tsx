@@ -12,7 +12,8 @@ import {
   CalendarIcon,
   UserIcon
 } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
+import ReactQuill from 'react-quill'; // Import React Quill
+import 'react-quill/dist/quill.snow.css'; // Import Quill's CSS
 
 const BlogManager: React.FC = () => {
   const { state, dispatch } = useApp();
@@ -126,7 +127,10 @@ const BlogManager: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => setShowCreateForm(true)}
+          onClick={() => {
+            resetForm();
+            setShowCreateForm(true);
+          }}
           className="btn-primary inline-flex items-center"
         >
           <PlusIcon className="w-5 h-5 mr-2" />
@@ -177,11 +181,11 @@ const BlogManager: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Content
               </label>
-              <textarea
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="input-field h-40 resize-none"
-                placeholder="Write your post content here..."
+              {/* This is the new ReactQuill component */}
+              <ReactQuill 
+                value={formData.content} 
+                onChange={(content) => setFormData({ ...formData, content })} 
+                className="bg-white dark:bg-gray-700 rounded-md text-gray-900 dark:text-white"
               />
             </div>
 
@@ -340,7 +344,10 @@ const BlogManager: React.FC = () => {
             Start writing your first blog post to share your thoughts with the world.
           </p>
           <button
-            onClick={() => setShowCreateForm(true)}
+            onClick={() => {
+              resetForm();
+              setShowCreateForm(true);
+            }}
             className="btn-primary"
           >
             Create Your First Post
@@ -373,7 +380,7 @@ const BlogManager: React.FC = () => {
                   onClick={() => setSelectedPost(null)}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  ×
+                  
                 </button>
               </div>
 

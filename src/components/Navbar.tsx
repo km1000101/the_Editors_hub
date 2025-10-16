@@ -1,7 +1,9 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
 import { useTheme } from '../contexts/ThemeContext';
 import { useApp } from '../contexts/AppContext';
+import { motion } from 'framer-motion'; // For smooth button animation
+
 import { 
   SunIcon, 
   MoonIcon, 
@@ -9,12 +11,21 @@ import {
   DocumentTextIcon, 
   ChartBarIcon,
   UserIcon,
-  BookmarkIcon
+  BookmarkIcon,
+  ArrowRightOnRectangleIcon // Icon for Logout
 } from '@heroicons/react/24/outline';
 
 const Navbar: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const { state } = useApp();
+  const { state, dispatch } = useApp(); // Need dispatch for logout
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Dispatch action to clear user state (defined in AppContext.tsx)
+    dispatch({ type: 'SET_USER', payload: null }); 
+    // Redirect to login page
+    navigate('/login');
+  };
 
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
@@ -32,7 +43,7 @@ const Navbar: React.FC = () => {
             </Link>
           </div>
 
-          {/* Navigation Links */}
+          {/* Navigation Links (Desktop) */}
           <div className="hidden md:flex items-center space-x-8">
             <Link
               to="/"
@@ -48,33 +59,69 @@ const Navbar: React.FC = () => {
               <DocumentTextIcon className="w-5 h-5" />
               <span>News</span>
             </Link>
-            <Link
-              to="/blog"
-              className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            >
-              <DocumentTextIcon className="w-5 h-5" />
-              <span>Blog</span>
-            </Link>
-            <Link
-              to="/analytics"
-              className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            >
-              <ChartBarIcon className="w-5 h-5" />
-              <span>Analytics</span>
-            </Link>
             
-              <Link
-                to="/bookmarks"
-                className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-              >
-                <BookmarkIcon className="w-5 h-5" />
-                <span>Bookmarks</span>
-              </Link>
-            
+            {/* Conditional Links (Only for logged-in users) */}
+            {state.user && (
+              <>
+                <Link
+                  to="/blog"
+                  className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  <DocumentTextIcon className="w-5 h-5" />
+                  <span>Blog</span>
+                </Link>
+                <Link
+                  to="/analytics"
+                  className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  <ChartBarIcon className="w-5 h-5" />
+                  <span>Analytics</span>
+                </Link>
+                <Link
+                  to="/bookmarks"
+                  className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  <BookmarkIcon className="w-5 h-5" />
+                  <span>Bookmarks</span>
+                </Link>
+              </>
+            )}
           </div>
 
-          {/* Right side */}
+          {/* Right side: User/Auth & Theme Toggle */}
           <div className="flex items-center space-x-4">
+            
+            {/* User/Auth Section */}
+            {state.user ? (
+              // SHOW LOGOUT BUTTON AND USER NAME
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <UserIcon className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:inline">
+                  {state.user.username}
+                </span>
+                
+                <motion.button
+                  onClick={handleLogout}
+                  className="p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center space-x-1"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Logout"
+                >
+                  <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                </motion.button>
+              </div>
+            ) : (
+              // SHOW LOGIN BUTTON
+              <Link
+                to="/login"
+                className="btn-primary"
+              >
+                Login
+              </Link>
+            )}
+
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
@@ -86,63 +133,26 @@ const Navbar: React.FC = () => {
                 <SunIcon className="w-5 h-5" />
               )}
             </button>
-
-            {/* User Menu */}
-            {state.user ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <UserIcon className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {state.user.username}
-                </span>
-              </div>
-            ) : (
-              <Link
-                to="/login"
-                className="btn-primary"
-              >
-                Login
-              </Link>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu (Keep your existing mobile menu structure) */}
       <div className="md:hidden">
         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-50 dark:bg-gray-900">
-          <Link
-            to="/"
-            className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            Home
-          </Link>
-          <Link
-            to="/news"
-            className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            News
-          </Link>
-          <Link
-            to="/blog"
-            className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            Blog
-          </Link>
-          <Link
-            to="/analytics"
-            className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            Analytics
-          </Link>
+          <Link to="/" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
+          <Link to="/news" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">News</Link>
+          <Link to="/blog" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Blog</Link>
+          <Link to="/analytics" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Analytics</Link>
           {state.user && (
-            <Link
-              to="/bookmarks"
-              className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
-            >
-              Bookmarks
-            </Link>
+            <Link to="/bookmarks" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Bookmarks</Link>
+          )}
+          
+          {/* Mobile Auth Button */}
+          {state.user ? (
+            <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">Logout</button>
+          ) : (
+            <Link to="/login" className="w-full text-left block px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">Login</Link>
           )}
         </div>
       </div>
