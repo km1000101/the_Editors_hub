@@ -76,6 +76,7 @@ const Home: React.FC = () => {
               ujhfuhndfnnfufu
               ijihfjff
               
+              sample.......................
             </motion.p>
 
             <motion.div
