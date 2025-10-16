@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import type { AppState, BlogPost, User, Bookmark, AnalyticsData, NewsArticle } from '../types';
+// Added Comment to imports, ensuring all types are available
+import type { AppState, BlogPost, User, Bookmark, AnalyticsData, NewsArticle, Comment } from '../types'; 
 
 interface AppContextType {
   state: AppState;
@@ -18,8 +19,10 @@ type AppAction =
   | { type: 'SET_NEWS_ARTICLES'; payload: NewsArticle[] }
   | { type: 'UPDATE_NEWS_ANALYTICS'; payload: AnalyticsData }
   | { type: 'INCREMENT_VIEWS'; payload: string }
-  | { type: 'INCREMENT_LIKES'; payload: string }
-  | { type: 'ADD_COMMENT'; payload: { postId: string; comment: { id: string; postId: string; author: string; content: string; createdAt: string } } };
+  // NEW: Action for Like/Unlike toggle
+  | { type: 'TOGGLE_LIKE'; payload: { postId: string; userId: string } } 
+  // FIX: Using the imported Comment type now.
+  | { type: 'ADD_COMMENT'; payload: { postId: string; comment: Comment } }; 
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -105,15 +108,35 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             : post
         )
       };
-
-    case 'INCREMENT_LIKES':
+      
+    // NEW: TOGGLE_LIKE REDUCER LOGIC
+    case 'TOGGLE_LIKE':
+      const { postId, userId } = action.payload;
       return {
         ...state,
-        blogPosts: state.blogPosts.map(post =>
-          post.id === action.payload
-            ? { ...post, likes: post.likes + 1 }
-            : post
-        )
+        blogPosts: state.blogPosts.map(post => {
+          if (post.id !== postId) return post;
+
+          const hasLiked = post.userLikes?.includes(userId);
+          let newUserLikes;
+          let newLikesCount;
+
+          if (hasLiked) {
+            // UNLIKE: Remove user ID from array and decrement likes
+            newUserLikes = post.userLikes.filter(id => id !== userId);
+            newLikesCount = post.likes - 1;
+          } else {
+            // LIKE: Add user ID to array and increment likes
+            newUserLikes = [...(post.userLikes || []), userId];
+            newLikesCount = post.likes + 1;
+          }
+
+          return {
+            ...post,
+            likes: newLikesCount,
+            userLikes: newUserLikes // Stored array of user IDs
+          };
+        }),
       };
 
     case 'ADD_COMMENT':

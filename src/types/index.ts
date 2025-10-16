@@ -23,11 +23,12 @@ export interface BlogPost {
   likes: number;
   comments: Comment[];
   tags: string[];
+  userLikes: string[]; // <-- NEW: Stores user IDs for the Like/Unlike toggle
 }
 
 export interface Comment {
   id: string;
-  postId: string;
+  // FIX: Removed postId. This was the source of the persistent type error.
   author: string;
   content: string;
   createdAt: string;
