@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import type { AppState, BlogPost, User, Bookmark, AnalyticsData } from '../types';
+import type { AppState, BlogPost, User, Bookmark, AnalyticsData, NewsArticle } from '../types';
 
 interface AppContextType {
   state: AppState;
@@ -15,6 +15,8 @@ type AppAction =
   | { type: 'ADD_BOOKMARK'; payload: Bookmark }
   | { type: 'REMOVE_BOOKMARK'; payload: string }
   | { type: 'UPDATE_ANALYTICS'; payload: AnalyticsData }
+  | { type: 'SET_NEWS_ARTICLES'; payload: NewsArticle[] }
+  | { type: 'UPDATE_NEWS_ANALYTICS'; payload: AnalyticsData }
   | { type: 'INCREMENT_VIEWS'; payload: string }
   | { type: 'INCREMENT_LIKES'; payload: string };
 
@@ -35,6 +37,13 @@ const initialState: AppState = {
   blogPosts: [],
   bookmarks: [],
   analytics: {
+    postViews: [],
+    postLikes: [],
+    comments: [],
+    topPosts: []
+  },
+  newsArticles: [],
+  newsAnalytics: {
     postViews: [],
     postLikes: [],
     comments: [],
@@ -79,6 +88,12 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
 
     case 'UPDATE_ANALYTICS':
       return { ...state, analytics: action.payload };
+
+    case 'SET_NEWS_ARTICLES':
+      return { ...state, newsArticles: action.payload };
+
+    case 'UPDATE_NEWS_ANALYTICS':
+      return { ...state, newsAnalytics: action.payload };
 
     case 'INCREMENT_VIEWS':
       return {

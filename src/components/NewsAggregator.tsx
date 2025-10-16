@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
-import type { NewsArticle, Bookmark } from '../types';
+import type { NewsArticle, Bookmark, AnalyticsData } from '../types';
 import { 
   MagnifyingGlassIcon, 
   FunnelIcon, 
@@ -191,6 +191,46 @@ const NewsAggregator: React.FC = () => {
         } else {
           setArticles(prev => [...prev, ...articlesWithCategory]);
         }
+
+        // Persist in global state for analytics consumers
+        const combined = isNewSearch ? articlesWithCategory : [...articles, ...articlesWithCategory];
+        dispatch({ type: 'SET_NEWS_ARTICLES', payload: combined });
+
+        // Compute lightweight simulated analytics based on fetched news
+        const now = new Date();
+        const last30Days = Array.from({ length: 30 }, (_, i) => {
+          const date = new Date(now);
+          date.setDate(date.getDate() - (29 - i));
+          return date.toISOString().split('T')[0];
+        });
+
+        const base = combined.length;
+        const postViews = last30Days.map(date => ({
+          date,
+          views: Math.floor(Math.random() * 150) + base * 3
+        }));
+        const postLikes = last30Days.map(date => ({
+          date,
+          likes: Math.floor(Math.random() * 70) + base
+        }));
+        const comments = last30Days.map(date => ({
+          date,
+          comments: Math.floor(Math.random() * 40) + Math.floor(base / 3)
+        }));
+
+        // Derive "topPosts" from article titles using randomized engagement proxies
+        const topPosts = combined
+          .slice(0, 10)
+          .map(a => ({
+            title: (a.title || 'Untitled').length > 30 ? (a.title || 'Untitled').substring(0, 30) + '...' : (a.title || 'Untitled'),
+            views: Math.floor(Math.random() * 1000) + 100,
+            likes: Math.floor(Math.random() * 300) + 20
+          }))
+          .sort((a, b) => (b.views + b.likes) - (a.views + a.likes))
+          .slice(0, 5);
+
+        const analytics: AnalyticsData = { postViews, postLikes, comments, topPosts };
+        dispatch({ type: 'UPDATE_NEWS_ANALYTICS', payload: analytics });
         
         setHasMore(data.articles.length === 20);
       } else {
