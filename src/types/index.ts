@@ -53,6 +53,7 @@ export interface Bookmark {
   articleId: string;
   userId: string;
   createdAt: string;
+  article?: NewsArticle;
 }
 
 export type Theme = 'light' | 'dark';
@@ -63,11 +64,6 @@ export interface AppState {
   blogPosts: BlogPost[];
   bookmarks: Bookmark[];
   analytics: AnalyticsData;
-}
-export interface Bookmark {
-  id: string;
-  articleId: string;
-  userId: string;
-  createdAt: string;
-  article?: NewsArticle;
+  newsArticles: NewsArticle[];
+  newsAnalytics: AnalyticsData;
 }
