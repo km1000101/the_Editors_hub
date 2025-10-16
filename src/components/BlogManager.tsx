@@ -507,7 +507,7 @@ const BlogManager: React.FC = () => {
             }}
             className="btn-primary"
           >
-            Create Your First Post
+            Create Your First Post!
           </button>
         </motion.div>
       )}
