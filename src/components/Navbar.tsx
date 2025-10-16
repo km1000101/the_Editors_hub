@@ -1,8 +1,8 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
 import { useTheme } from '../contexts/ThemeContext';
 import { useApp } from '../contexts/AppContext';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // For smooth button animation
 
 import { 
   SunIcon, 
@@ -12,7 +12,7 @@ import {
   ChartBarIcon,
   UserIcon,
   BookmarkIcon,
-  ArrowRightOnRectangleIcon 
+  ArrowRightOnRectangleIcon // Icon for Logout
 } from '@heroicons/react/24/outline';
 
 const Navbar: React.FC = () => {
@@ -60,7 +60,7 @@ const Navbar: React.FC = () => {
               <span>News</span>
             </Link>
             
-            {/* Merged Conditional Links (Only for logged-in users) */}
+            {/* Conditional Links (Only for logged-in users) */}
             {state.user && (
               <>
                 <Link
@@ -142,13 +142,10 @@ const Navbar: React.FC = () => {
         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-50 dark:bg-gray-900">
           <Link to="/" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
           <Link to="/news" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">News</Link>
-          {/* Mobile conditional links */}
+          <Link to="/blog" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Blog</Link>
+          <Link to="/analytics" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Analytics</Link>
           {state.user && (
-            <>
-              <Link to="/blog" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Blog</Link>
-              <Link to="/analytics" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Analytics</Link>
-              <Link to="/bookmarks" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Bookmarks</Link>
-            </>
+            <Link to="/bookmarks" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Bookmarks</Link>
           )}
           
           {/* Mobile Auth Button */}
