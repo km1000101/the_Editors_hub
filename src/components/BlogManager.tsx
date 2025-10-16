@@ -380,7 +380,7 @@ const BlogManager: React.FC = () => {
                   onClick={() => setSelectedPost(null)}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  ×
+                  
                 </button>
               </div>
 
