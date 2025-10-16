@@ -1,21 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Added useEffect and useRef
 import { motion } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
 import type { BlogPost, Comment } from '../types';
+import toast from "react-hot-toast"; 
 import { 
   PlusIcon, 
   PencilIcon, 
   TrashIcon, 
   EyeIcon,
-  HeartIcon,
+  HeartIcon as HeartOutlineIcon, // Renamed for clarity
   ChatBubbleLeftIcon,
   CalendarIcon,
   UserIcon
 } from '@heroicons/react/24/outline';
-import ReactQuill from 'react-quill'; // Import React Quill
-import 'react-quill/dist/quill.snow.css'; // Import Quill's CSS
-import toast from "react-hot-toast";
+import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'; // Import Solid Heart
+import ReactQuill from 'react-quill'; 
+import 'react-quill/dist/quill.snow.css'; 
 
+// Define constants for Auto-Save
+const DRAFT_KEY = 'blogDrafts';
+const AUTOSAVE_INTERVAL = 5000; // 5 seconds
 
 const BlogManager: React.FC = () => {
   const { state, dispatch } = useApp();
@@ -23,6 +27,7 @@ const BlogManager: React.FC = () => {
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [commentText, setCommentText] = useState('');
+  const autosaveTimerRef = useRef<number | null>(null); // To manage the timer
 
   const [formData, setFormData] = useState({
     title: '',
@@ -31,8 +36,83 @@ const BlogManager: React.FC = () => {
     tags: ''
   });
 
+  // --- AUTOSAVE LOGIC ---
+
+  // Effect 1: Load draft on component mount
+  useEffect(() => {
+    if (!editingPost) {
+      const savedDraft = localStorage.getItem(DRAFT_KEY);
+      if (savedDraft) {
+        try {
+            const draft = JSON.parse(savedDraft);
+            setFormData(draft);
+            setShowCreateForm(true); 
+            toast("Draft restored!", {icon: "💾"});
+        } catch (e) {
+            console.error("Failed to parse saved draft:", e);
+        }
+      }
+    }
+    return () => {
+        if (autosaveTimerRef.current) {
+            clearTimeout(autosaveTimerRef.current);
+        }
+    };
+  }, [editingPost]);
+
+  // Effect 2: Setup interval to save draft whenever form data changes
+  useEffect(() => {
+    if (showCreateForm) {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+
+      autosaveTimerRef.current = window.setTimeout(() => {
+        if (formData.title.trim() || formData.content.trim()) {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+            console.log("Draft saved automatically.");
+        }
+      }, AUTOSAVE_INTERVAL);
+    }
+    
+    return () => {
+        if (autosaveTimerRef.current) {
+            clearTimeout(autosaveTimerRef.current);
+        }
+    };
+  }, [formData, showCreateForm]);
+  // --- END AUTOSAVE LOGIC ---
+
+
+  // --- LIKE TOGGLE HANDLER (New Logic) ---
+
+  const handleLikeToggle = (postId: string, currentLikes: string[] | undefined) => {
+    // FIX: Safely check for userId and return if undefined
+    const userId = state.user?.id;
+    if (!userId) {
+      toast.error("Please sign in to like a post.", { icon: "🔒" });
+      return;
+    }
+
+    const hasLiked = currentLikes?.includes(userId);
+    const successMsg = hasLiked ? "Post unliked." : "Post liked!";
+    
+    // Dispatch the single TOGGLE_LIKE action
+    dispatch({ type: 'TOGGLE_LIKE', payload: { postId, userId } });
+    toast.success(successMsg, { icon: hasLiked ? "💔" : "❤️" });
+  };
+
+
+  // --- CRUD HANDLERS ---
+
   const handleCreatePost = () => {
     if (!formData.title || !formData.content) return;
+
+    // Clear draft storage on successful creation
+    localStorage.removeItem(DRAFT_KEY);
+    if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+    }
 
     const newPost: BlogPost = {
       id: Date.now().toString(),
@@ -45,7 +125,8 @@ const BlogManager: React.FC = () => {
       views: 0,
       likes: 0,
       comments: [],
-      tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+      tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+      userLikes: [] // Initialize new userLikes array
     };
 
     dispatch({ type: 'ADD_BLOG_POST', payload: newPost });
@@ -56,6 +137,12 @@ const BlogManager: React.FC = () => {
 
   const handleUpdatePost = () => {
     if (!editingPost || !formData.title || !formData.content) return;
+
+    // Clear draft storage on successful update
+    localStorage.removeItem(DRAFT_KEY);
+    if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+    }
 
     const updatedPost: BlogPost = {
       ...editingPost,
@@ -70,28 +157,54 @@ const BlogManager: React.FC = () => {
     toast.success(`Edited the blog: "${formData.title}"`, { icon: "✏️" });
     setEditingPost(null);
     setFormData({ title: '', content: '', excerpt: '', tags: '' });
-    setShowCreateForm(false);   
+    setShowCreateForm(false); 
   };
 
   const handleDeletePost = (postId: string, title: string) => {
-  if (window.confirm("Are you sure you want to delete this post?")) {
-    dispatch({ type: "DELETE_BLOG_POST", payload: postId });
-    toast.error(`Deleted blog: "${title}"`, {
-      icon: "🗑️",
-      duration: 3000,
-    });
-  }
-};
-
-
-  const handleLike = (postId: string) => {
-    dispatch({ type: 'INCREMENT_LIKES', payload: postId });
+    if (window.confirm("Are you sure you want to delete this post?")) {
+      dispatch({ type: "DELETE_BLOG_POST", payload: postId });
+      toast.error(`Deleted blog: "${title}"`, {
+        icon: "🗑️",
+        duration: 3000,
+      });
+      if (selectedPost && selectedPost.id === postId) {
+          setSelectedPost(null);
+      }
+    }
   };
+
 
   const handleView = (post: BlogPost) => {
     dispatch({ type: 'INCREMENT_VIEWS', payload: post.id });
     setSelectedPost(post);
   };
+
+  const handleAddComment = (postId: string) => {
+    if (!commentText.trim()) return;
+
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      author: state.user?.username || 'Anonymous',
+      content: commentText,
+      createdAt: new Date().toISOString()
+    };
+
+    dispatch({
+      type: 'ADD_COMMENT',
+      payload: { postId, comment: newComment }
+    });
+
+    setCommentText('');
+    toast.success("Comment posted!", { icon: "💬" });
+
+    if (selectedPost) {
+      setSelectedPost({
+        ...selectedPost,
+        comments: [...selectedPost.comments, newComment]
+      });
+    }
+  };
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -107,6 +220,13 @@ const BlogManager: React.FC = () => {
     setFormData({ title: '', content: '', excerpt: '', tags: '' });
     setShowCreateForm(false);
     setEditingPost(null);
+    // CLEAR DRAFT on manual reset
+    if (typeof localStorage !== 'undefined') { // Safety check
+      localStorage.removeItem(DRAFT_KEY);
+    }
+    if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+    }
   };
 
   const startEdit = (post: BlogPost) => {
@@ -118,32 +238,6 @@ const BlogManager: React.FC = () => {
       tags: post.tags.join(', ')
     });
     setShowCreateForm(true);
-  };
-
-  const handleAddComment = (postId: string) => {
-    if (!commentText.trim()) return;
-
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      postId,
-      author: state.user?.username || 'Anonymous',
-      content: commentText,
-      createdAt: new Date().toISOString()
-    };
-
-    dispatch({
-      type: 'ADD_COMMENT',
-      payload: { postId, comment: newComment }
-    });
-
-    setCommentText('');
-
-    if (selectedPost) {
-      setSelectedPost({
-        ...selectedPost,
-        comments: [...selectedPost.comments, newComment]
-      });
-    }
   };
 
   return (
@@ -218,7 +312,6 @@ const BlogManager: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Content
               </label>
-              {/* This is the new ReactQuill component */}
               <ReactQuill 
                 value={formData.content} 
                 onChange={(content) => setFormData({ ...formData, content })} 
@@ -239,19 +332,24 @@ const BlogManager: React.FC = () => {
               />
             </div>
 
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={resetForm}
-                className="btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={editingPost ? handleUpdatePost : handleCreatePost}
-                className="btn-primary"
-              >
-                {editingPost ? 'Update Post' : 'Create Post'}
-              </button>
+            <div className="flex justify-between items-center pt-2 border-t dark:border-gray-700">
+                <p className="text-xs text-gray-500 italic">
+                    Draft is automatically saved every {AUTOSAVE_INTERVAL / 1000} seconds.
+                </p>
+                <div className="flex justify-end space-x-4">
+                    <button
+                      onClick={resetForm}
+                      className="btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={editingPost ? handleUpdatePost : handleCreatePost}
+                      className="btn-primary"
+                    >
+                      {editingPost ? 'Update Post' : 'Create Post'}
+                    </button>
+                </div>
             </div>
           </div>
         </motion.div>
@@ -264,103 +362,117 @@ const BlogManager: React.FC = () => {
         transition={{ duration: 0.8, delay: 0.2 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
       >
-        {state.blogPosts.map((post, index) => (
-          <motion.article
-            key={post.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: index * 0.1 }}
-            whileHover={{ y: -5 }}
-            className="card overflow-hidden group"
-          >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <UserIcon className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {post.author}
-                  </span>
-                </div>
-                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                  <CalendarIcon className="w-4 h-4 mr-1" />
-                  {formatDate(post.createdAt)}
-                </div>
-              </div>
+        {state.blogPosts.map((post, index) => {
+          // Check if current user has liked this post
+          const userId = state.user?.id;
+          // FIX: Added check to ensure userId exists before calling includes()
+          const hasLiked = userId && post.userLikes?.includes(userId);
 
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2">
-                {post.title}
-              </h3>
-
-              <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
-                {post.excerpt}
-              </p>
-
-              {/* Tags */}
-              {post.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {post.tags.map((tag, tagIndex) => (
-                    <span
-                      key={tagIndex}
-                      className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full"
-                    >
-                      {tag}
+          return (
+            <motion.article
+              key={post.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: index * 0.1 }}
+              whileHover={{ y: -5 }}
+              className="card overflow-hidden group"
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <UserIcon className="w-5 h-5 text-gray-400" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {post.author}
                     </span>
-                  ))}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                    <CalendarIcon className="w-4 h-4 mr-1" />
+                    {formatDate(post.createdAt)}
+                  </div>
                 </div>
-              )}
 
-              {/* Stats */}
-              <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2">
+                  {post.title}
+                </h3>
+
+                <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
+                  {post.excerpt}
+                </p>
+
+                {/* Tags */}
+                {post.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {post.tags.map((tag, tagIndex) => (
+                      <span
+                        key={tagIndex}
+                        className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Stats */}
+                <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center">
+                      <EyeIcon className="w-4 h-4 mr-1" />
+                      {post.views}
+                    </div>
+                    {/* Likes Display (Color changes based on current user like status) */}
+                    <div className={`flex items-center ${hasLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {hasLiked ? <HeartSolidIcon className="w-4 h-4 mr-1 fill-current" /> : <HeartOutlineIcon className="w-4 h-4 mr-1" />}
+                      {post.likes}
+                    </div>
+                    <div className="flex items-center">
+                      <ChatBubbleLeftIcon className="w-4 h-4 mr-1" />
+                      {post.comments.length}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-between">
+                  <button
+                    onClick={() => handleView(post)}
+                    className="btn-secondary text-sm"
+                  >
                     <EyeIcon className="w-4 h-4 mr-1" />
-                    {post.views}
-                  </div>
-                  <div className="flex items-center">
-                    <HeartIcon className="w-4 h-4 mr-1" />
-                    {post.likes}
-                  </div>
-                  <div className="flex items-center">
-                    <ChatBubbleLeftIcon className="w-4 h-4 mr-1" />
-                    {post.comments.length}
+                    View
+                  </button>
+
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => startEdit(post)}
+                      className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    >
+                      <PencilIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeletePost(post.id, post.title)}
+                      className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                    {/* Like/Unlike Toggle Button */}
+                    <button
+                      onClick={() => handleLikeToggle(post.id, post.userLikes)}
+                      className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    >
+                      {/* Icon is conditional based on hasLiked status */}
+                      {hasLiked ? (
+                        <HeartSolidIcon className="w-4 h-4 text-red-500" />
+                      ) : (
+                        <HeartOutlineIcon className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
-
-              {/* Actions */}
-              <div className="flex justify-between">
-                <button
-                  onClick={() => handleView(post)}
-                  className="btn-secondary text-sm"
-                >
-                  <EyeIcon className="w-4 h-4 mr-1" />
-                  View
-                </button>
-
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => startEdit(post)}
-                    className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                  >
-                    <PencilIcon className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeletePost(post.id,post.title)}
-                    className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleLike(post.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                  >
-                    <HeartIcon className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.article>
-        ))}
+            </motion.article>
+          );
+        })}
       </motion.div>
 
       {/* Empty State */}
@@ -417,7 +529,7 @@ const BlogManager: React.FC = () => {
                   onClick={() => setSelectedPost(null)}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  
+                  ×
                 </button>
               </div>
 
