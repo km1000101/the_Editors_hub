@@ -64,6 +64,16 @@ const NewsAggregator: React.FC = () => {
   }, []);
 
   const speakArticle = (article: NewsArticle) => {
+    const isThisArticlePlaying = isSpeaking && currentSpeakingId === article.id;
+
+    if (isThisArticlePlaying) {
+      // STOP Logic: If the same article is currently playing, stop it.
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setCurrentSpeakingId(null);
+      setIsPaused(false);
+      return; // Exit the function after stopping
+    }
     window.speechSynthesis.cancel();
 
     const textToSpeak = `${article.title}. ${article.description || ''}`;
