@@ -25,8 +25,7 @@ import {
   EyeIcon,
   HeartIcon,
   ChatBubbleLeftIcon,
-  ArrowTrendingUpIcon,
-  UsersIcon
+  ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline';
 
 const AnalyticsDashboard: React.FC = () => {
@@ -37,16 +36,12 @@ const AnalyticsDashboard: React.FC = () => {
     comments: [],
     topPosts: []
   });
-  const [source, setSource] = useState<'blog' | 'news'>('blog');
   const [rangeIndex, setRangeIndex] = useState<{ startIndex: number; endIndex: number } | null>(null);
 
   useEffect(() => {
-    if (source === 'blog') {
-      generateAnalyticsData();
-    } else if (source === 'news' && state.newsAnalytics) {
-      setAnalytics(state.newsAnalytics);
-    }
-  }, [state.blogPosts, state.newsAnalytics, source]);
+    // Always generate analytics for blog posts only
+    generateAnalyticsData();
+  }, [state.blogPosts]);
 
   const generateAnalyticsData = () => {
     const currentUsername = state.user?.username;
@@ -109,12 +104,11 @@ const AnalyticsDashboard: React.FC = () => {
     return analytics.comments.slice(rangeIndex.startIndex, rangeIndex.endIndex + 1);
   }, [analytics.comments, rangeIndex]);
 
-  const totalViews = filteredViews.reduce((sum, item) => sum + item.views, 0);
-  const totalLikes = filteredLikes.reduce((sum, item) => sum + item.likes, 0);
-  const totalComments = filteredComments.reduce((sum, item) => sum + item.comments, 0);
-  const totalPosts = source === 'blog'
-    ? (state.user ? state.blogPosts.filter(p => p.author === state.user?.username).length : state.blogPosts.length)
-    : (state.newsArticles?.length || 0);
+  const userBlogPosts = state.user ? state.blogPosts.filter(p => p.author === state.user?.username) : state.blogPosts;
+  const totalViews = userBlogPosts.reduce((sum, post) => sum + post.views, 0);
+  const totalLikes = userBlogPosts.reduce((sum, post) => sum + post.likes, 0);
+  const totalComments = userBlogPosts.reduce((sum, post) => sum + post.comments.length, 0);
+  const totalPosts = userBlogPosts.length;
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
@@ -164,23 +158,7 @@ const AnalyticsDashboard: React.FC = () => {
         <p className="text-xl text-gray-600 dark:text-gray-300">
           Track your content performance and engagement metrics
         </p>
-        <div className="mt-4 flex items-center space-x-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Data source:</span>
-          <div className="inline-flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-            <button
-              className={`px-3 py-1 text-sm ${source === 'blog' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-700 dark:text-gray-300'}`}
-              onClick={() => setSource('blog')}
-            >
-              Blog
-            </button>
-            <button
-              className={`px-3 py-1 text-sm ${source === 'news' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-700 dark:text-gray-300'}`}
-              onClick={() => setSource('news')}
-            >
-              News
-            </button>
-          </div>
-        </div>
+        {/* Data source toggle removed to lock analytics to Blog */}
       </motion.div>
 
       {/* Stats Grid */}
@@ -427,43 +405,7 @@ const AnalyticsDashboard: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Engagement Overview */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.8 }}
-        className="card p-6"
-      >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Engagement Overview
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
-              {totalPosts > 0 ? Math.round(totalViews / totalPosts) : 0}
-            </div>
-            <div className="text-gray-600 dark:text-gray-400">
-              Average Views per Post
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2">
-              {totalPosts > 0 ? Math.round(totalLikes / totalPosts) : 0}
-            </div>
-            <div className="text-gray-600 dark:text-gray-400">
-              Average Likes per Post
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
-              {totalPosts > 0 ? Math.round(totalComments / totalPosts) : 0}
-            </div>
-            <div className="text-gray-600 dark:text-gray-400">
-              Average Comments per Post
-            </div>
-          </div>
-        </div>
-      </motion.div>
+      {/* Engagement Overview removed as requested */}
     </div>
   );
 };
