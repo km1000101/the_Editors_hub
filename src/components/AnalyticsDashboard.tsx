@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
+import { useTheme } from '../contexts/ThemeContext';
 import type { AnalyticsData } from '../types';
 import {
   LineChart,
@@ -30,6 +31,7 @@ import {
 
 const AnalyticsDashboard: React.FC = () => {
   const { state } = useApp();
+  const { theme } = useTheme();
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     postViews: [],
     postLikes: [],
@@ -142,6 +144,12 @@ const AnalyticsDashboard: React.FC = () => {
   const totalPosts = userBlogPosts.length;
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+  const isDark = theme === 'dark';
+  const axisTickColor = isDark ? '#E5E7EB' : '#374151';
+  const axisLineColor = isDark ? '#4B5563' : '#D1D5DB';
+  const gridColor = isDark ? '#374151' : '#E5E7EB';
+  const tooltipBg = isDark ? '#111827' : '#FFFFFF';
+  const tooltipFg = isDark ? '#F9FAFB' : '#111827';
 
   const stats = [
     {
@@ -242,14 +250,17 @@ const AnalyticsDashboard: React.FC = () => {
                 if (e && e.activeLabel && e.brushIndex !== undefined) return; // ignore
               }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
               <XAxis 
                 dataKey="date" 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: axisTickColor }}
+                axisLine={{ stroke: axisLineColor }}
+                tickLine={{ stroke: axisLineColor }}
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               />
-              <YAxis tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12, fill: axisTickColor }} axisLine={{ stroke: axisLineColor }} tickLine={{ stroke: axisLineColor }} />
               <Tooltip 
+                contentStyle={{ backgroundColor: tooltipBg, borderColor: axisLineColor, color: tooltipFg }}
                 labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { 
                   year: 'numeric', 
                   month: 'long', 
@@ -288,14 +299,17 @@ const AnalyticsDashboard: React.FC = () => {
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={analytics.postLikes}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
               <XAxis 
                 dataKey="date" 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: axisTickColor }}
+                axisLine={{ stroke: axisLineColor }}
+                tickLine={{ stroke: axisLineColor }}
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               />
-              <YAxis tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12, fill: axisTickColor }} axisLine={{ stroke: axisLineColor }} tickLine={{ stroke: axisLineColor }} />
               <Tooltip 
+                contentStyle={{ backgroundColor: tooltipBg, borderColor: axisLineColor, color: tooltipFg }}
                 labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { 
                   year: 'numeric', 
                   month: 'long', 
@@ -334,14 +348,17 @@ const AnalyticsDashboard: React.FC = () => {
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={analytics.comments}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
               <XAxis 
                 dataKey="date" 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: axisTickColor }}
+                axisLine={{ stroke: axisLineColor }}
+                tickLine={{ stroke: axisLineColor }}
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               />
-              <YAxis tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12, fill: axisTickColor }} axisLine={{ stroke: axisLineColor }} tickLine={{ stroke: axisLineColor }} />
               <Tooltip 
+                contentStyle={{ backgroundColor: tooltipBg, borderColor: axisLineColor, color: tooltipFg }}
                 labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { 
                   year: 'numeric', 
                   month: 'long', 
@@ -412,8 +429,8 @@ const AnalyticsDashboard: React.FC = () => {
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Tooltip />
-              <Legend />
+              <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: axisLineColor, color: tooltipFg }} />
+              <Legend wrapperStyle={{ color: axisTickColor }} />
               <Pie
                 data={[
                   { name: 'Views', value: totalViews },
