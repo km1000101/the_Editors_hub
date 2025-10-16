@@ -14,6 +14,8 @@ import {
 } from '@heroicons/react/24/outline';
 import ReactQuill from 'react-quill'; // Import React Quill
 import 'react-quill/dist/quill.snow.css'; // Import Quill's CSS
+import toast from "react-hot-toast";
+
 
 const BlogManager: React.FC = () => {
   const { state, dispatch } = useApp();
@@ -47,6 +49,7 @@ const BlogManager: React.FC = () => {
     };
 
     dispatch({ type: 'ADD_BLOG_POST', payload: newPost });
+    toast.success(`Created new blog: "${formData.title}"`, { icon: "📝" });
     setFormData({ title: '', content: '', excerpt: '', tags: '' });
     setShowCreateForm(false);
   };
@@ -64,15 +67,22 @@ const BlogManager: React.FC = () => {
     };
 
     dispatch({ type: 'UPDATE_BLOG_POST', payload: updatedPost });
+    toast.success(`Edited the blog: "${formData.title}"`, { icon: "✏️" });
     setEditingPost(null);
     setFormData({ title: '', content: '', excerpt: '', tags: '' });
+    setShowCreateForm(false);   
   };
 
-  const handleDeletePost = (postId: string) => {
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      dispatch({ type: 'DELETE_BLOG_POST', payload: postId });
-    }
-  };
+  const handleDeletePost = (postId: string, title: string) => {
+  if (window.confirm("Are you sure you want to delete this post?")) {
+    dispatch({ type: "DELETE_BLOG_POST", payload: postId });
+    toast.error(`Deleted blog: "${title}"`, {
+      icon: "🗑️",
+      duration: 3000,
+    });
+  }
+};
+
 
   const handleLike = (postId: string) => {
     dispatch({ type: 'INCREMENT_LIKES', payload: postId });
@@ -335,7 +345,7 @@ const BlogManager: React.FC = () => {
                     <PencilIcon className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDeletePost(post.id)}
+                    onClick={() => handleDeletePost(post.id,post.title)}
                     className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                   >
                     <TrashIcon className="w-4 h-4" />
