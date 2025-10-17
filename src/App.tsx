@@ -10,6 +10,7 @@ import AnalyticsDashboard from "./components/AnalyticsDashboard";
 import Bookmarks from "./pages/Bookmarks";
 import Login from "./pages/Login";
 import { Toaster } from "react-hot-toast"; // ✅ Toast library added
+import LightRays from "./components/LightRays";
 
 // Define the props interface for the ProtectedRoute
 interface ProtectedRouteProps {
@@ -30,21 +31,40 @@ function App() {
     <ThemeProvider>
       <AppProvider>
         <Router>
-          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-            <Navbar />
-            <main>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/news" element={<NewsAggregator />} />
+          <div className="min-h-screen transition-colors duration-300 relative">
+            {/* Fixed background LightRays animation */}
+            <div className="pointer-events-none fixed inset-0 z-0">
+              <LightRays
+                raysOrigin="top-center"
+                raysColor="#1fbcff"
+                raysSpeed={1.5}
+                lightSpread={0.8}
+                rayLength={5}
+                followMouse={false}
+                mouseInfluence={0.1}
+                noiseAmount={0.1}
+                distortion={0.05}
+                className="w-full h-full"
+              />
+            </div>
 
-                {/* Protected Routes */}
-                <Route path="/blog" element={<ProtectedRoute><BlogManager /></ProtectedRoute>} />
-                <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
-                <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
-              </Routes>
-            </main>
+            {/* Foreground content */}
+            <div className="relative z-10">
+              <Navbar />
+              <main>
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/" element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/news" element={<NewsAggregator />} />
+
+                  {/* Protected Routes */}
+                  <Route path="/blog" element={<ProtectedRoute><BlogManager /></ProtectedRoute>} />
+                  <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
+                  <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
+                </Routes>
+              </main>
+            </div>
           </div>
 
           {/* ✅ Global Toaster with Dark/Light Mode Support */}

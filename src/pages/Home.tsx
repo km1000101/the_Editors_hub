@@ -42,7 +42,7 @@ const Home: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen">
       {/* Hero Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -72,7 +72,6 @@ const Home: React.FC = () => {
             >
               A modern platform that combines news aggregation, personal blogging, and analytics 
               in one powerful application. Create, discover, and analyze content like never before.
-              sample.......................
             </motion.p>
 
             <motion.div
