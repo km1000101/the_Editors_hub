@@ -563,9 +563,10 @@ const BlogManager: React.FC = () => {
               </div>
 
               <div className="prose dark:prose-invert max-w-none">
-                <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
-                  {selectedPost.content}
-                </div>
+                <div
+                  className="text-gray-700 dark:text-gray-300"
+                  dangerouslySetInnerHTML={{ __html: selectedPost.content }}
+                />
               </div>
 
               <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
