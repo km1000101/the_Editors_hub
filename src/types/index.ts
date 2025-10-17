@@ -23,7 +23,8 @@ export interface BlogPost {
   likes: number;
   comments: Comment[];
   tags: string[];
-  userLikes: string[]; // <-- NEW: Stores user IDs for the Like/Unlike toggle
+  userLikes: string[];
+  userBookmarks: string[];
 }
 
 export interface Comment {

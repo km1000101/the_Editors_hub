@@ -3,17 +3,18 @@ import { motion } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
 import type { BlogPost, Comment } from '../types';
 import toast from "react-hot-toast"; 
-import { 
-  PlusIcon, 
-  PencilIcon, 
-  TrashIcon, 
+import {
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
   EyeIcon,
-  HeartIcon as HeartOutlineIcon, // Renamed for clarity
+  HeartIcon as HeartOutlineIcon,
   ChatBubbleLeftIcon,
   CalendarIcon,
-  UserIcon
+  UserIcon,
+  BookmarkIcon as BookmarkOutlineIcon
 } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'; // Import Solid Heart
+import { HeartIcon as HeartSolidIcon, BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
 import ReactQuill from 'react-quill'; 
 import 'react-quill/dist/quill.snow.css'; 
 
@@ -89,8 +90,6 @@ const BlogManager: React.FC = () => {
   // --- END AUTOSAVE LOGIC ---
 
 
-  // --- LIKE TOGGLE HANDLER ---
-
   const handleLikeToggle = (postId: string, currentLikes: string[] | undefined) => {
     const userId = state.user?.id;
     if (!userId) {
@@ -100,10 +99,23 @@ const BlogManager: React.FC = () => {
 
     const hasLiked = currentLikes?.includes(userId);
     const successMsg = hasLiked ? "Post unliked." : "Post liked!";
-    
-    // Dispatch the single TOGGLE_LIKE action
+
     dispatch({ type: 'TOGGLE_LIKE', payload: { postId, userId } });
     toast.success(successMsg, { icon: hasLiked ? "🤍" : "❤️" });
+  };
+
+  const handleBookmarkToggle = (postId: string, currentBookmarks: string[] | undefined) => {
+    const userId = state.user?.id;
+    if (!userId) {
+      toast.error("Please sign in to bookmark a post.");
+      return;
+    }
+
+    const hasBookmarked = currentBookmarks?.includes(userId);
+    const successMsg = hasBookmarked ? "Bookmark removed." : "Post bookmarked!";
+
+    dispatch({ type: 'TOGGLE_BLOG_BOOKMARK', payload: { postId, userId } });
+    toast.success(successMsg);
   };
 
 
@@ -132,7 +144,8 @@ const BlogManager: React.FC = () => {
       likes: 0,
       comments: [],
       tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-      userLikes: [] // Initialize new userLikes array
+      userLikes: [],
+      userBookmarks: []
     };
 
     dispatch({ type: 'ADD_BLOG_POST', payload: newPost });
@@ -371,10 +384,9 @@ const BlogManager: React.FC = () => {
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
       >
         {state.blogPosts.map((post, index) => {
-          // Check if current user has liked this post
           const userId = state.user?.id;
-          // FIX: Added check to ensure userId exists before calling includes()
           const hasLiked = userId && post.userLikes?.includes(userId);
+          const hasBookmarked = userId && post.userBookmarks?.includes(userId);
 
           return (
             <motion.article
@@ -383,7 +395,8 @@ const BlogManager: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: index * 0.1 }}
               whileHover={{ y: -5 }}
-              className="card overflow-hidden group"
+              className="card overflow-hidden group cursor-pointer"
+              onClick={() => handleView(post)}
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -407,7 +420,6 @@ const BlogManager: React.FC = () => {
                   {post.excerpt}
                 </p>
 
-                {/* Tags */}
                 {post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-4">
                     {post.tags.map((tag, tagIndex) => (
@@ -421,14 +433,12 @@ const BlogManager: React.FC = () => {
                   </div>
                 )}
 
-                {/* Stats */}
                 <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center">
                       <EyeIcon className="w-4 h-4 mr-1" />
                       {post.views}
                     </div>
-                    {/* Likes Display (Color changes based on current user like status) */}
                     <div className={`flex items-center ${hasLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
                       {hasLiked ? <HeartSolidIcon className="w-4 h-4 mr-1 fill-current" /> : <HeartOutlineIcon className="w-4 h-4 mr-1" />}
                       {post.likes}
@@ -440,8 +450,7 @@ const BlogManager: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex justify-between">
+                <div className="flex justify-between" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => handleView(post)}
                     className="btn-secondary text-sm"
@@ -454,25 +463,37 @@ const BlogManager: React.FC = () => {
                     <button
                       onClick={() => startEdit(post)}
                       className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                      title="Edit post"
                     >
                       <PencilIcon className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeletePost(post.id, post.title)}
                       className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      title="Delete post"
                     >
                       <TrashIcon className="w-4 h-4" />
                     </button>
-                    {/* Like/Unlike Toggle Button */}
                     <button
                       onClick={() => handleLikeToggle(post.id, post.userLikes)}
                       className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      title={hasLiked ? "Unlike post" : "Like post"}
                     >
-                      {/* Icon is conditional based on hasLiked status */}
                       {hasLiked ? (
                         <HeartSolidIcon className="w-4 h-4 text-red-500" />
                       ) : (
                         <HeartOutlineIcon className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleBookmarkToggle(post.id, post.userBookmarks)}
+                      className="p-2 text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors"
+                      title={hasBookmarked ? "Remove bookmark" : "Bookmark post"}
+                    >
+                      {hasBookmarked ? (
+                        <BookmarkSolidIcon className="w-4 h-4 text-yellow-500" />
+                      ) : (
+                        <BookmarkOutlineIcon className="w-4 h-4" />
                       )}
                     </button>
                   </div>

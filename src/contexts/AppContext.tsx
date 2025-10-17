@@ -19,9 +19,8 @@ type AppAction =
   | { type: 'SET_NEWS_ARTICLES'; payload: NewsArticle[] }
   | { type: 'UPDATE_NEWS_ANALYTICS'; payload: AnalyticsData }
   | { type: 'INCREMENT_VIEWS'; payload: string }
-  // NEW: Action for Like/Unlike toggle
-  | { type: 'TOGGLE_LIKE'; payload: { postId: string; userId: string } } 
-  // FIX: Using the imported Comment type now.
+  | { type: 'TOGGLE_LIKE'; payload: { postId: string; userId: string } }
+  | { type: 'TOGGLE_BLOG_BOOKMARK'; payload: { postId: string; userId: string } }
   | { type: 'ADD_COMMENT'; payload: { postId: string; comment: Comment } }; 
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -147,6 +146,29 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             ? { ...post, comments: [...post.comments, action.payload.comment] }
             : post
         )
+      };
+
+    case 'TOGGLE_BLOG_BOOKMARK':
+      const { postId: bookmarkPostId, userId: bookmarkUserId } = action.payload;
+      return {
+        ...state,
+        blogPosts: state.blogPosts.map(post => {
+          if (post.id !== bookmarkPostId) return post;
+
+          const hasBookmarked = post.userBookmarks?.includes(bookmarkUserId);
+          let newUserBookmarks;
+
+          if (hasBookmarked) {
+            newUserBookmarks = post.userBookmarks.filter(id => id !== bookmarkUserId);
+          } else {
+            newUserBookmarks = [...(post.userBookmarks || []), bookmarkUserId];
+          }
+
+          return {
+            ...post,
+            userBookmarks: newUserBookmarks
+          };
+        }),
       };
 
     default:
