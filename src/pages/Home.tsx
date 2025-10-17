@@ -72,7 +72,6 @@ const Home: React.FC = () => {
             >
               A modern platform that combines news aggregation, personal blogging, and analytics 
               in one powerful application. Create, discover, and analyze content like never before.
-              kjfhvhbfjg
             </motion.p>
 
             <motion.div

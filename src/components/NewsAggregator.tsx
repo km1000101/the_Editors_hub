@@ -31,7 +31,6 @@ const NewsAggregator: React.FC = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentSpeakingId, setCurrentSpeakingId] = useState<string | null>(null);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -44,16 +43,21 @@ const NewsAggregator: React.FC = () => {
   useEffect(() => {
     const loadVoices = () => {
       const availableVoices = window.speechSynthesis.getVoices();
-      setVoices(availableVoices);
-      
-      const englishVoice = availableVoices.find(voice => 
-        voice.lang.startsWith('en')
-      );
-      setSelectedVoice(englishVoice || availableVoices[0]);
+
+      // Prefer exact Google UK English Female voice; otherwise fall back sensibly
+      const preferred =
+        availableVoices.find(v => v.name === 'Google UK English Female') ||
+        availableVoices.find(v => v.lang === 'en-GB' && /Google/i.test(v.name)) ||
+        availableVoices.find(v => v.lang === 'en-GB') ||
+        availableVoices.find(v => v.lang.startsWith('en')) ||
+        availableVoices[0] ||
+        null;
+
+      setSelectedVoice(preferred);
     };
 
     loadVoices();
-    
+
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
@@ -512,25 +516,7 @@ const NewsAggregator: React.FC = () => {
           )}
         </div>
 
-        {voices.length > 0 && (
-          <div className="flex justify-center items-center space-x-2">
-            <label className="text-sm text-gray-600 dark:text-gray-300">Voice:</label>
-            <select
-              value={selectedVoice?.name || ''}
-              onChange={(e) => {
-                const voice = voices.find(v => v.name === e.target.value);
-                setSelectedVoice(voice || null);
-              }}
-              className="text-sm px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            >
-              {voices.map((voice) => (
-                <option key={voice.name} value={voice.name}>
-                  {voice.name} ({voice.lang})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        {/* Voice selection dropdown removed; voice is forced to Google UK English Female if available */}
       </motion.div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
